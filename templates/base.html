@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta http-equiv="content-language" content="en" />
+    <meta name="author" lang="en" content="..." />
+    <meta name="copyright" lang="en" content="..." />
+    <meta name="description" content="..." />
+    <meta name="keywords" content="..." />
+    <meta name="robots" content="all,follow" />
+    <link href="static/css/screen.css" type="text/css" rel="stylesheet" media="screen,projection" />
+    <!--[if lte IE 6]>
+    <link href="css/msie.css" type="text/css" rel="stylesheet" media="screen,projection" />
+    <![endif]-->
+    <link rel="stylesheet" media="print" type="text/css" href="static/css/print.css" />
+    <script type="text/javascript" src="static/js/main.js"></script>
+    <title>Vishy &ndash; moody,angry</title>
+  </head>
+  <body>
+    <div id="layout">
+
+      <div id="header">
+
+        <h1 id="logo"><a href="./" title="Company">cupi<span class="light">Eaten</span><span class="leaf">&nbsp;</span></a></h1>
+        <hr class="noscreen" />
+
+        <p class="noscreen noprint">
+          <em>Skip to <a href="#obsah">content</a>, <a href="#nav">navigation</a>.</em>
+        </p>
+
+      <hr class="noscreen" />
+
+      <div id="nav" class="box">
+        <ul>
+          <li><a href="/">Home<br /><span>Main page</span></a></li>
+          <li><a href="/who">Who<br /><span>Our team</span></a></li>
+          <li><a href="/">What<br /><span>Our services</span></a></li>
+					<li><a href="/">Portfolio<br /><span>Our woks</span></a></li>
+					<li><a href="/reach">Contact<br /><span>Write us!</span></a></li>
+				</ul>
+        <hr class="noscreen" />
+      </div>
+
+      <div id="container" class="box">
+
+        <div id="obsah" class="content box">
+          {% block content %}{% endblock %}
+        </div>
+
+        <div id="panel-left" class="box panel">
+          <div class="in">
+
+          {% for feed_item in feeds %}
+
+          <p>
+            <span>{{ feed_item.date }}</span><br />
+            {{ feed_item.title }}.</br>
+            <a href="{{ feed_item.link }}" target="_blank">Read more...</a>
+          </p>
+          {% endfor %}
+          </div>
+        </div>
+
+      </div>
+
+        <div id="footer">
+          <span class="f-left">&copy; 2008 <a href="/">Vishy</a></span> <span class="f-right">Design: <a href="#">Vish Gite</a> | Friend: <a href="http://naren.me" title="Blogger">Naren L</a></span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

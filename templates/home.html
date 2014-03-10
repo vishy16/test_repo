@@ -1,0 +1,114 @@
+{% extends "templates/base.html" %}
+{% block content %}
+    <div class="in">
+      <h2> In the Cloud or Not? </h2>
+<p>Some people love the cloud. (As in cloud computing, e.g. Google App Engine, Amazon EC2, Microsoft Azure.) Others hate it. They gripe about lock-in, proprietary APIs and so on. (I would provide links to examples of both attitudes, but I don't have time right now, and you can fill those in yourself easily. :-) </p>
+
+<p>I wonder if, apart from the field being young, the differences of opinion may be similar to the different attitude towards home ownership: some folks hate renting, citing landlord conflicts, noisy neighbors and so on. Others hate home ownership, due to the outsize financial commitment and risk (all too clear to many these days), the never-ending maintenance (new roof, new fence, new furnace, new bathroom, new kitchen, it never ends). I'm kind of in the middle myself, having had good landlords in the past, and disliking the maintenance effort/cost for my own home these days, but enjoying the independence.</p>
+
+<p>Obviously cloud computing would be more similar to renting, while traditional datacenter ownership to home ownership (though without the aspect of building up wealth through ownership :-). </p>
+
+<p>Someone else can take the analogy further, and compare different styles of cloud services to different ways landlords can run their business. (E.g. with Google App Engine you get carpet and furniture as part of the deal, and meals delivered as an option, while Amazon EC2 rents out bare concrete units where you can do as you please. There's a market for both.)</p>
+
+<p>If that's the case, we should expect that the love/hate posts will never stop, and we'll never convince all haters to love the cloud. But there will be plenty of business for the landlords from those who prefer not to own their own servers, and we might as well cater to them rather than be discouraged by the cloud haters.</p>
+
+
+<p>
+Sorting a million 32-bit integers in 2MB of RAM using Python
+Someone jokingly asked me how I would sort a million 32-bit integers in 2 megabytes of RAM, using Python. Taking up the challenge, I leared something about buffered I/O.
+
+Obviously this is a joke question -- the data alone would take up 4 megabytes, assuming binary encoding! But there's a possible interpretation: given a file containing a million 32-bit integers, how would you sort them with minimal memory usage? This would have to be some kind of merge sort, where small chunks of the data are sorted in memory and written to a temporary file, and then the temporary files are merged into the eventual output area.
+
+Here is my solution. I'll annotate it in a minute.
+
+NOTE: All my examples use Python 3.0. The main difference in this case is the use of file.buffer to access the binary stream underlying the text stream file.
+
+#!/usr/bin/env python3.0
+import sys, array, tempfile, heapq
+assert array.array('i').itemsize == 4
+
+def intsfromfile(f):
+  while True:
+     a = array.array('i')
+     a.fromstring(f.read(4000))
+     if not a:
+         break
+     for x in a:
+         yield x
+
+iters = []
+while True:
+  a = array.array('i')
+  a.fromstring(sys.stdin.buffer.read(40000))
+  if not a:
+      break
+  f = tempfile.TemporaryFile()
+  array.array('i', sorted(a)).tofile(f)
+  f.seek(0)
+  iters.append(intsfromfile(f))
+
+a = array.array('i')
+for x in heapq.merge(*iters):
+  a.append(x)
+  if len(a) >= 1000:
+      a.tofile(sys.stdout.buffer)
+      del a[:]
+if a:
+  a.tofile(sys.stdout.buffer)
+On my Google desktop (a 3 year old PC running a Googlified Linux, rating about 34000 Python 3.0 pystones) this took about 5.4 seconds to run, with an input file containing exactly 1,000,000 32-bit random integers. That's not so bad, given that a straightforward in-memory sort of the same input took about 2 seconds:
+#!/usr/bin/env python3.0
+import sys, array
+a = array.array('i', sys.stdin.buffer.read())
+a = list(a)
+a.sort()
+a = array.array('i', a)
+a.tofile(sys.stdout.buffer)
+Back to the merge-sort solution. The first three lines are obvious:
+#!/usr/bin/env python3.0
+import sys, array, tempfile, heapq
+assert array.array('i').itemsize == 4
+The first line says we're using Python 3.0. The second line imports the modules we're going to need. The third line here makes it break on those 64-bit systems where the 'i' typecode doesn't represent a 32-bit int; I am making no attempts to write this code portably.
+
+Then we define a little helper that is a generator which reads integers from a file and yields them one at a time:
+def intsfromfile(f):
+  while True:
+      a = array.array('i')
+      a.fromstring(f.read(4000))
+      if not a:
+          break
+      for x in a:
+          yield x
+This is where the performance tuning of the algorithm takes place: it reads up to 1000 integers at a time, and yields them one by one. I had originally written this without buffering -- it would just read 4 bytes from the file, convert them to an integer, and yield the result. But that ran about 4 times as slow! Note that we can't use a.fromfile(f, 1000) because the fromfile() method complains bitterly when there aren't enough values in the file, and I want the code to adapt automatically to however many integers are on the file. (It turns out we write about 10,000 integers to a typical temp file.)
+Next we have the input loop. This repeatedly reads a chunk of 10,000 integers from the input file, sorts them in memory, and writes them to a temporary file. We then add an iterator over that temporary file, using the above intsfromfile() function, to a list of iterators that we'll use in the subsequent merge phase.
+
+iters = []
+while True:
+  a = array.array('i')
+  a.fromstring(sys.stdin.buffer.read(40000))
+  if not a:
+      break
+  f = tempfile.TemporaryFile()
+  array.array('i', sorted(a)).tofile(f)
+  f.seek(0)
+  iters.append(intsfromfile(f))
+Note that for an input containing a million values, this creates 100 temporary files each containing 10,000 values.
+Finally we merge all these files (each of which is sorted) together. The heapq module has a really nice function for this purpose: heapq.merge(iter1, iter2, ...) returns an iterator that yields the input values in order, assuming each input itself yields its values in order (as is the case here).
+
+a = array.array('i')
+for x in heapq.merge(*iters):
+  a.append(x)
+  if len(a) >= 1000:
+      a.tofile(sys.stdout.buffer)
+      del a[:]
+if a:
+  a.tofile(sys.stdout.buffer)
+This is another place where buffered I/O turned out to be essential: Writing each individual value to a file as soon as it is available slows the algorithm down about twofold. Thus, by simply adding input and output buffering, we gained a tenfold speed-up!
+
+And that's the main moral of the story.
+Another lesson is praise for the heapq module, which contains the iterator merge functionality needed in the output phase. Also, let's not forget the utility of the array module for managing binary data.
+
+And finally, let this example remind you that Python 3.0 is notso different from Python 2.5!
+
+</p>
+    </div>
+{% endblock %}
